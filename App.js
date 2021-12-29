@@ -1,13 +1,4 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow strict-local
- */
-
 import React from 'react';
-import type {Node} from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -15,7 +6,10 @@ import {
   StyleSheet,
   Text,
   useColorScheme,
-  View,TouchableOpacity,TextInput
+  View,
+  TouchableOpacity,
+  TextInput,
+  FlatList,Button
 } from 'react-native';
 
 import {
@@ -25,48 +19,50 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
-import SQLite from 'react-native-sqlite-storage'
+import SQLite from 'react-native-sqlite-storage';
+import DBService from './src/services/DBService'
 
-
-const db=SQLite.openDatabase({name: 'MainDB', location: 'default'},
-()=>{
- console.log('success opening DB')
-}, 
-()=>{
-  console.log('error opening DB')
-});
-
+const db = SQLite.openDatabase(
+  {name: 'MainDB', location: 'default'},
+  () => {
+    console.log('success opening DB');
+  },
+  () => {
+    console.log('error opening DB');
+  },
+);
 
 const App = () => {
   const isDarkMode = useColorScheme() === 'dark';
 
   const [count, setCount] = React.useState(0);
   const onPress = () => setCount(prevCount => prevCount + 1);
-  const [name, setName] = React.useState("");
-  const [age, setAge] = React.useState(0);
-  
+  const [name, setName] = React.useState('');
+  const [age, setAge] = React.useState('');
+  const [data, setData] = React.useState([]);
 
+  React.useEffect(()=>{
+    getData();
+  },[])
 
   const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter
+    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
-  const createTable=async()=>{
+  const createTable = async () => {
+    console.log('inside create table');
+    await db.transaction(tx => {
+      tx.executeSql(
+        'CREATE TABLE IF NOT EXISTS ' +
+          ' users ' +
+          '(Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Age INTEGER);',
+      );
+    });
+    insertData();
+  };
 
-    console.log('inside create table')
-    await db.transaction((tx)=>{
-       tx.executeSql(
-        "CREATE TABLE IF NOT EXISTS "
-        +" users "
-        +"(Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Age INTEGER);"
-      )
-
-    })
-    insertData()
-  }
-
-  const insertData=async()=>{
-    console.log('inside insertData')
+  const insertData = async () => {
+    console.log('inside insertData');
     // db.transaction((tx)=>{
     //   tx.executeSql(
     //     "INSERT INTO "
@@ -76,89 +72,92 @@ const App = () => {
 
     // })
 
-    console.log(name)
-    console.log(age)
-    await db.transaction((tx)=>{
-       tx.executeSql(
-        "INSERT INTO "
-        +" users "
-        +"(Name ,Age) VALUES(?,?)",[name,age]
-      )
+    console.log(name);
+    console.log(age);
+    await db.transaction(tx => {
+      tx.executeSql('INSERT INTO ' + ' users ' + '(Name ,Age) VALUES(?,?)', [
+        name,
+        age,
+      ]);
+    });
+  };
 
-    })
-    
-  }
+  const getData = async() => {
 
-  const getData=async()=>{
-   await db.transaction((tx)=>{
-      tx.executeSql(
-        "SELECT * FROM  users ",[],
-        (tx,results)=>{
-          if(results.rows.length>0){
-           // console.log(results)
+    // const _data =  DBService.fetchData();
+    //   setData(_data);
 
-            // for(var user in results.item){
-            //   console.log(user)
-            //   //console.log(results.rows.item(0).Age)
-            // }
-            for(var i=0;i<results.rows.length;i++){
-
-              console.log(results.rows.item(i), i )
-            }
-           
-          }else{
-            console.log('no data returnes')
-          }
+    let _data = [];
+    await db.transaction(tx => {
+      tx.executeSql('SELECT * FROM  users ', [], (tx, results) => {
+        if (results.rows.length > 0) {
          
-        }
+          for (var i = 0; i < results.rows.length; i++) {
+           // console.log(results.rows.item(i), i);
+            let item = results.rows.item(i);
+            //console.log(item)
+            _data.push({Id: item.Id, Name: item.Name, Age: item.Age});
+            
+          }
+          console.log(_data)
+          setData(_data);
         
-      )
+        }
+      });
+    });
+  
+  
+  };
 
-    })
-  }
 
 
+   
+  
+
+ const renderItem=({item})=>{
+
+  return(
+    <View style={{flexDirection:'row',justifyContent:'space-around'}}>
+      <Text style={{color:'red'}}>{item.Id}</Text>
+      <Text style={{color:'red'}}>{item.Name}</Text>
+      <Text style={{color:'red'}}>{item.Age}</Text>
+    </View>
+  )
+ }
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <ScrollView
-      keyboardShouldPersistTaps='handled'
+      {/* <ScrollView
+        keyboardShouldPersistTaps="handled"
         contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-          <View style={{justifyContent:'center'}}>
-
+        style={backgroundStyle}> */}
+        <View style={{justifyContent: 'center'}}>
           <TextInput
-        style={styles.input}
-        onChangeText={setName}
-        placeholder="Name"
-        value={name}
-      />
-      <TextInput
-        style={styles.input}
-        onChangeText={setAge}
-        value={age}
-        placeholder="Ager"
-        keyboardType="numeric"
-      />
+            style={styles.input}
+            onChangeText={setName}
+            placeholder="Name"
+            value={name}
+          />
+          <TextInput
+            style={styles.input}
+            onChangeText={setAge}
+            value={age}
+            placeholder="Age"
+            keyboardType="numeric"
+          />
 
-          <TouchableOpacity
-        style={styles.button}
-        onPress={()=>createTable()}
-      >
-        <Text>Save</Text>
-      </TouchableOpacity>
+          <Button title="Save" onPress={() => createTable()}/>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={()=>getData()}
-      >
-        <Text>Fetch</Text>
-      </TouchableOpacity>
-          </View>
-        
-       
+          <Button title="Submit"  onPress={() => DBService.fetchData()}/>
+           
 
-      </ScrollView>
+          <FlatList
+            data={data}
+            renderItem={renderItem}
+            keyExtractor={item => item.Id}
+          />
+        </View>
+      {/* </ScrollView> */}
     </SafeAreaView>
   );
 };
@@ -181,14 +180,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   button: {
-    alignItems: "center",
+    alignItems: 'center',
     //backgroundColor: "#DDDDDD",
-    padding: 10
+    padding: 10,
   },
   countContainer: {
-    alignItems: "center",
-    padding: 10
-  }
+    alignItems: 'center',
+    padding: 10,
+  },
 });
 
 export default App;
