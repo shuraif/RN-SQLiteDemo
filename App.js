@@ -39,6 +39,7 @@ const App = () => {
   const onPress = () => setCount(prevCount => prevCount + 1);
   const [name, setName] = React.useState('');
   const [age, setAge] = React.useState('');
+  const [Id, setId] = React.useState('');
   const [data, setData] = React.useState([]);
 
   React.useEffect(()=>{
@@ -80,6 +81,7 @@ const App = () => {
         age,
       ]);
     });
+    getData([])
   };
 
   const getData = async() => {
@@ -110,8 +112,22 @@ const App = () => {
   };
 
 
+const deleteData=async()=>{
 
-   
+  await db.transaction(tx => {
+    tx.executeSql('DELETE FROM users WHERE Id='+Id);
+  });
+  getData()
+  
+}
+
+const clearData=async()=>{
+
+  await db.transaction(tx => {
+    tx.executeSql('DELETE FROM users where id>0');
+  });
+  setData([])
+}
   
 
  const renderItem=({item})=>{
@@ -148,7 +164,15 @@ const App = () => {
 
           <Button title="Save" onPress={() => createTable()}/>
 
-          <Button title="Submit"  onPress={() => DBService.fetchData()}/>
+          <TextInput
+            style={styles.input}
+            onChangeText={setId}
+            value={Id}
+            placeholder="Id"
+            keyboardType="numeric"
+          />
+
+          <Button title="Delete"  onPress={() => deleteData()}/>
            
 
           <FlatList
@@ -156,6 +180,7 @@ const App = () => {
             renderItem={renderItem}
             keyExtractor={item => item.Id}
           />
+            <Button title="Clear All"  onPress={() => clearData()}/>
         </View>
       {/* </ScrollView> */}
     </SafeAreaView>
